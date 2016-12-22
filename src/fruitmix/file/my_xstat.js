@@ -155,8 +155,10 @@ const readXstatAsync = async target => {
     if(stats.isFile()) attr.magic = fileMagic(target)
   }
   
+  // save new attr if dirty
   if(dirty) await xattr.setAsync(target, FRUITMIX, JSON.stringify(attr))
 
+  //remove props not passed to caller
   if(stats.isFile() && attr.htime) delete attr.htime
   if(stats.isFile() && typeof attr.magic === 'number') delete attr.magic
 
@@ -164,15 +166,22 @@ const readXstatAsync = async target => {
 }
 
 const readXstat = (target, callback) => readXstatAsync(target).asCallback(callback)
-  
 
-const updateXattrPermission = () => {}
+const updateXattrPermission = (targert, uuid, writelist, readlist, callback) => {
+  if(!isUUID(uuid))
+    return process.nextTick(() => callback(EInvalid('invalid uuid')))
+
+  readXstat(target, (err, xstat) => {
+    if(err) return callback(err)
+    if(xstat.uuid !== uuid) return callback(InstanceMismatch())
+
+    let newAttr = {uuid}
+  })
+}
 
 const updateXattrHash = () => {}
 
 const copyXattr = () => {}
-
-
 
 
 export { 
