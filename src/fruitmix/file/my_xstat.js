@@ -166,6 +166,7 @@ const readXstatAsync = async target => {
 }
 
 const readXstat = (target, callback) => readXstatAsync(target).asCallback(callback)
+  
 
 const updateXattrPermission = (targert, uuid, writelist, readlist, callback) => {
   if(!isUUID(uuid))
@@ -182,6 +183,8 @@ const updateXattrPermission = (targert, uuid, writelist, readlist, callback) => 
 const updateXattrHash = () => {}
 
 const copyXattr = () => {}
+
+
 
 
 export { 
