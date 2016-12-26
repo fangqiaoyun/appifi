@@ -4,7 +4,7 @@ import xattr from 'fs-xattr'
 import UUID from 'node-uuid'
 import validator from 'validator'
 
-Promise.psomisifyAll(fs)
+Promise.promisifyAll(fs)
 Promise.promisifyAll(xattr)
 
 // constants
@@ -61,7 +61,7 @@ const validateOldFormat = (attr, isFile) => {
     if (attr.hasOwnProperty('hash') === attr.hasOwnProperty('htime')) {}
     else throw new SyntaxError('hash and htime inconsistent')
       
-    if (attr.hasOwnProperty('hash') {
+    if (attr.hasOwnProperty('hash')) {
       if (!isSHA256(attr.hash))
         throw new SyntaxError('invalid hash string')
 
@@ -92,7 +92,7 @@ const validateNewFormat = (attr, isFile) => {
     if (attr.hasOwnProperty('hash') === attr.hasOwnProperty('htime')) {}
     else throw new SyntaxError('hash and htime inconsistent')
       
-    if (attr.hasOwnProperty('hash') {
+    if (attr.hasOwnProperty('hash')) {
       if (!isSHA256(attr.hash))
         throw new SyntaxError('invalid hash string')
 

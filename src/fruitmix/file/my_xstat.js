@@ -5,7 +5,8 @@ import UUID from 'node-uuid'
 import validator from 'validator'
 import shallowequal from 'shallowequal'
 
-Promise.promisifyAll('xattr')
+Promise.promisifyAll(xattr)
+Promise.promisifyAll(fs)
 
 // constant
 const FRUITMIX = 'user.fruitmix'
@@ -25,22 +26,15 @@ const InstanceMismatch = (text) =>
 const TimestampMismatch = (text) =>
   Object.assign((new Error(text || 'timestamp mismatch')), { code: 'EOUTDATED' })
 
-// const readTimeStamp = (target, callback) =>
-//   fs.lstat(target, (err, stats) => 
-//     err ? callback(err) : callback(null, stats.mtime.getTime()))
+const readTimeStamp = (target, callback) =>
+  fs.lstat(target, (err, stats) => 
+    err ? callback(err) : callback(null, stats.mtime.getTime()))
 
 // test uuid, return true or false, accept undefined
 const isUUID = (uuid) => (typeof uuid === 'string') ? validator.isUUID(uuid) : false
 
 // validate uuid, if invalid, return new
 const validateUUID = (uuid) => isUUID(uuid) ? uuid : UUID.v4()
-
-// validate uuid array, if array, filter out invalid, if not array, return undefined
-// this function returns original if valid, for shallowequal comparison
-const validateUserList = (list) => {
-  if (!Array.isArray(list)) return undefined // undefined
-  return list.every(isUUID) ? list : list.filter(isUUID)
-}
 
 // validate hash
 const isSHA256 = (hash) => /[a-f0-9]{64}/.test(hash)
@@ -49,11 +43,11 @@ const isSHA256 = (hash) => /[a-f0-9]{64}/.test(hash)
 const parseMagic = text => text.startWith('JPEG image data') ? 'JPEG' : UNINTERESTED_MAGIC_VERSION
 
 //get magic of file
-const fileMagic = (target, callback) => {
-  child.exec(`file -b ${target}`, (err, stdout, stderr) => {
+const fileMagic = (target, callback) =>
+  child.exec(`file -b ${target}`, (err, stdout, stderr) => 
     err ? callback(err) : callback(parseMagic(stdout.toString()))
-  })
-}
+
+const fileMagicAsync = Promise.promisify(fileMagic)
 
 // throw SyntaxError if given attr is bad formatted
 const validateOldFormat = (attr, isFile) => {
@@ -138,7 +132,7 @@ const readXstatAsync = async target => {
       if(attr.writelist === null) delete attr.writelist
       if(attr.readlist === null) delete attr.readlist
       if(stats.isFile())
-        attr.magic = attr.magic ? parseMagic(attr.magic) : fileMagic(attr.magic)
+        attr.magic = attr.magic ? parseMagic(attr.magic) : await fileMagicAsync(target)
     } else
       validateNewFormat(attr)
 
@@ -152,7 +146,7 @@ const readXstatAsync = async target => {
     if(e.code !== 'ENODATA' && !(e instanceof SyntaxError)) throw e
     dirty = true
     attr = { uuid : UUID.v4()}
-    if(stats.isFile()) attr.magic = fileMagic(target)
+    if(stats.isFile()) attr.magic = await fileMagicAsync(target)
   }
   
   // save new attr if dirty
@@ -175,12 +169,37 @@ const updateXattrPermission = (targert, uuid, writelist, readlist, callback) => 
   readXstat(target, (err, xstat) => {
     if(err) return callback(err)
     if(xstat.uuid !== uuid) return callback(InstanceMismatch())
+    if(!xstat.isDirectory()) 
+      return callback(Object.assign(new Error('not a directory'), {code : 'ENOTDOR'}))
 
-    let newAttr = {uuid}
+    let newAttr = {uuid, writelist, readlist}
+    xattr.set(target, FRUITMIX, JSON.stringify(newAttr), err =>
+      err ? callback(err) : callback(null, Object.assign(xstat, {writelist, readlist})) )
   })
 }
 
-const updateXattrHash = () => {}
+const updateXattrHash = (target, uuid, hash, htime, callback) => {
+  if(!isUUID(uuid))
+    return process.nextTick(() => callback(EInvalid('invalid uuid')))
+
+  readXstat(target, (err, xstat) => {
+    if(err) return callback(err)
+
+    // uuid mismatch
+    if(xstat.uuid !== uuid) return callback(InstanceMismatch())
+
+    // invalid hash
+    if(!isSHA256(hash)) return callback(EInvalid())
+
+    // timestamp mismatch
+    if(xstat.mtime.getTime() !== htime) return callback(TimestampMismatch())
+
+    let {writelist, readlist} = xstat
+    let newAttr = {uuid, writelist, readlist, hash, htime}
+    xattr.set(target, FRUITMIX, JSON.stringify(attr), err => 
+      err ? callback(err) : callback(null, Object.assign(xstat, {hash, htime})))
+  })
+}
 
 const copyXattr = () => {}
 
