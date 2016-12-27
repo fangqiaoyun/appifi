@@ -45,7 +45,7 @@ const parseMagic = text => text.startWith('JPEG image data') ? 'JPEG' : UNINTERE
 //get magic of file
 const fileMagic = (target, callback) =>
   child.exec(`file -b ${target}`, (err, stdout, stderr) => 
-    err ? callback(err) : callback(parseMagic(stdout.toString()))
+    err ? callback(err) : callback(null, parseMagic(stdout.toString()))
 
 const fileMagicAsync = Promise.promisify(fileMagic)
 

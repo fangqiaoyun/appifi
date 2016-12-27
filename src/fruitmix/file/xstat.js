@@ -32,7 +32,7 @@ const isSHA256 = (hash) => /[a-f0-9]{64}/.test(hash)
 // it's fast, child.exec is sufficient
 const fileMagic = (target, callback) => 
   child.exec(`file -b ${target}`, (err, stdout, stderr) =>
-    err ? callback(err) : callback(parseMagic(stdout.toString())))
+    err ? callback(err) : callback(null, parseMagic(stdout.toString())))
 
 const fileMagicAsync = Promise.promisify(fileMagic)
 
@@ -171,7 +171,7 @@ const readXstat = (target, callback) => readXstatAsync(target).asCallback(callba
 const updateXattrPermission = (target, uuid, writelist, readlist, callback) => {
 
   if (!isUUID(uuid))
-    return process.nextTick(() => callback(EInvalid('invalid uuid'))
+    return process.nextTick(() => callback(EInvalid('invalid uuid')))
 
   readXstat(target, (err, xstat) => {
 
