@@ -34,6 +34,8 @@ const fileMagic = (target, callback) =>
   child.exec(`file -b ${target}`, (err, stdout, stderr) =>
     err ? callback(err) : callback(parseMagic(stdout.toString())))
 
+const fileMagicAsync = Promise.promisify(fileMagic)
+
 const readTimeStamp = (target, callback) =>
   fs.lstat(target, (err, stats) => 
     err ? callback(err) : callback(null, stats.mtime.getTime()))
@@ -223,7 +225,6 @@ const copyXattr = (dst, src, callback) => {
   })
 }
 
-const readXstatAsync = Promise.promisify(readXstat)
 const copyXattrAsync = Promise.promisify(copyXattr)
 
 const testing = {}
